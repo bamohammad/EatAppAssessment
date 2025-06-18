@@ -1,0 +1,23 @@
+//
+//  DefaultRestaurantRepository.swift
+//  EatAppAssessment
+//
+//  Created by Ali Bamohammad on 18/06/2025.
+//
+
+final class DefaultRestaurantRepository: RestaurantRepository {
+    private let api: RestaurantAPI
+
+    init(api: RestaurantAPI) {
+        self.api = api
+    }
+
+    func fetchRestaurants(regionId:String ,page: Int, limit: Int) async throws -> RestaurantList {
+        do {
+            let dto = try await api.fetchRestaurants(regionId: regionId, page: page, limit: limit)
+            return RestaurantList(from: dto)
+        } catch {
+            throw error
+        }
+    }
+}
