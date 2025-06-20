@@ -220,7 +220,7 @@ private struct RestaurantInfoSection: View {
             Text(restaurant.name)
                 .font(.title.bold())
                 .foregroundColor(theme.colors.text)
-            RatingView(rating: String(format: "%.1f", restaurant.rating))
+            RatingView(rating: restaurant.formattedRating)
             Spacer()
         }
     }

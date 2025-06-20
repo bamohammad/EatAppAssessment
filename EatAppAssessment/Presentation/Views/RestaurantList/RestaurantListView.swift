@@ -77,7 +77,6 @@ private extension RestaurantListView {
         appNavigation.navigate(route: .restaurantDetails(restaurant: restaurant))
     }
 
-
     @ViewBuilder
     func destinationView(for route: AppNavigation.Route) -> some View {
         switch route {
@@ -139,7 +138,7 @@ private extension RestaurantRowView {
 
             Spacer()
 
-            RatingView(rating: formattedRating)
+            RatingView(rating:restaurant.formattedRating)
         }
     }
 
@@ -171,31 +170,20 @@ private extension RestaurantRowView {
 
     var restaurantTags: some View {
         VStack(alignment: .leading, spacing: Constants.verticalSpacing) {
-            if let priceLevel = restaurant.priceLevel?.symbol {
-                RestaurantTagView(
-                    title: priceLevel,
-                    backgroundColor: theme.colors.background
-                )
-            }
+            RestaurantTagView(
+                title: restaurant.priceLevel.symbol,
+                backgroundColor: theme.colors.background
+            )
 
-            if let cuisine = restaurant.cuisine {
-                RestaurantTagView(
-                    title: cuisine,
-                    backgroundColor: theme.colors.background
-                )
-            }
+            RestaurantTagView(
+                title: restaurant.cuisine,
+                backgroundColor: theme.colors.background
+            )
         }
         .padding(Constants.contentPadding)
     }
 }
 
-// MARK: - Helpers
-
-extension RestaurantRowView {
-    var formattedRating: String {
-        String(format: "%.1f", restaurant.rating ?? 0)
-    }
-}
 
 // MARK: - RestaurantTagView
 

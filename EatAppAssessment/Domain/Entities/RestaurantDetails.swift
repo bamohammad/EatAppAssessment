@@ -15,12 +15,8 @@ struct RestaurantDetails: Identifiable, Equatable {
     let reviewCount: Int
     let imageUrl: URL?
     let location: RestaurantLocation
-    let contact: RestaurantContact
-    let features: RestaurantFeatures
-    let operatingHours: OperatingHours
     let description: String
     let notice: String?
-    let establishmentType: EstablishmentType
     let labels: [RestaurantLabel]
 }
 
@@ -48,73 +44,6 @@ struct Address: Equatable {
     }
 }
 
-struct RestaurantContact: Equatable {
-    let phone: String?
-    let menuUrl: URL?
-    let externalRatingsUrl: URL?
-}
-
-struct RestaurantFeatures: Equatable {
-    let hasAlcohol: Bool
-    let hasOutdoorSeating: Bool
-    let allowsSmoking: Bool
-    let hasValet: Bool
-    let acceptsBookings: Bool
-    let isDifficultToBook: Bool
-}
-
-struct OperatingHours: Equatable {
-    let rawHours: String
-
-    /// Parse operating hours string (e.g., "6:00pm-2:00am;6:00pm-2:00am...")
-    var dailyHours: [DayOfWeek: TimeRange] {
-        let hourComponents = rawHours.components(separatedBy: ";")
-        var hours: [DayOfWeek: TimeRange] = [:]
-
-        for (index, hourString) in hourComponents.enumerated() {
-            if let dayOfWeek = DayOfWeek(rawValue: index),
-               let timeRange = TimeRange(from: hourString) {
-                hours[dayOfWeek] = timeRange
-            }
-        }
-
-        return hours
-    }
-}
-
-struct TimeRange: Equatable {
-    let start: String
-    let end: String
-
-    init?(from string: String) {
-        let components = string.components(separatedBy: "-")
-        guard components.count == 2 else {
-            return nil
-        }
-        start = components[0]
-        end = components[1]
-    }
-}
-
-struct Review: Identifiable, Equatable {
-    let id: String
-    let title: String
-    let text: String
-    let rating: Int
-    let publishedDate: Date
-    let author: ReviewAuthor
-    let url: URL?
-
-    static func == (lhs: Review, rhs: Review) -> Bool {
-        lhs.id == rhs.id
-    }
-}
-
-struct ReviewAuthor: Equatable {
-    let username: String
-    let location: String
-}
-
 // MARK: - Enums
 
 enum PriceLevel: Int, CaseIterable {
@@ -134,19 +63,6 @@ enum PriceLevel: Int, CaseIterable {
         case .expensive: return "Expensive"
         case .luxury: return "Luxury"
         }
-    }
-}
-
-enum EstablishmentType: String, CaseIterable {
-    case casualDining = "Casual Dining"
-    case fineDining = "Fine Dining"
-    case fastFood = "Fast Food"
-    case cafe = "Cafe"
-    case bar = "Bar"
-    case foodTruck = "Food Truck"
-
-    var displayName: String {
-        rawValue
     }
 }
 
@@ -221,24 +137,22 @@ enum RestaurantLabel: String, CaseIterable {
     }
 }
 
-enum DayOfWeek: Int, CaseIterable {
-    case sunday = 0
-    case monday = 1
-    case tuesday = 2
-    case wednesday = 3
-    case thursday = 4
-    case friday = 5
-    case saturday = 6
-
-    var displayName: String {
+enum LabelCategory: String, CaseIterable {
+    case dressCode = "Dress Code"
+    case audience = "Good For"
+    case mealTime = "Meal Times"
+    case dietary = "Dietary"
+    case payment = "Payment"
+    case atmosphere = "Atmosphere"
+    
+    var systemImage: String {
         switch self {
-        case .sunday: return "Sunday"
-        case .monday: return "Monday"
-        case .tuesday: return "Tuesday"
-        case .wednesday: return "Wednesday"
-        case .thursday: return "Thursday"
-        case .friday: return "Friday"
-        case .saturday: return "Saturday"
+        case .dressCode: return "tshirt"
+        case .audience: return "person.3"
+        case .mealTime: return "clock"
+        case .dietary: return "leaf"
+        case .payment: return "creditcard"
+        case .atmosphere: return "sparkles"
         }
     }
 }

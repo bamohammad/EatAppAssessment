@@ -140,7 +140,7 @@ final class DefaultRestaurantRepositoryTests: XCTestCase {
         for restaurant in result.restaurants {
             XCTAssertFalse(restaurant.name.isEmpty)
             XCTAssertNotNil(restaurant.imageUrl)
-            XCTAssertGreaterThan(restaurant.rating ?? 0, 0.0)
+            XCTAssertGreaterThan(restaurant.rating, 0.0)
             XCTAssertNotNil(restaurant.cuisine)
         }
     }

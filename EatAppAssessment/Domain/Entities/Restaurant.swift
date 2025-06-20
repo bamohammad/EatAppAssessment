@@ -16,28 +16,18 @@ struct RestaurantList: Equatable {
 struct Restaurant: Identifiable, Equatable {
     let id: String
     let name: String
-    let cuisine: String?
-    let priceLevel: PriceLevel?
-    let rating: Double?
-    let reviewCount: Int?
+    let cuisine: String
+    let priceLevel: PriceLevel
+    let rating: Double
+    let reviewCount: Int
     let imageUrl: URL?
     let location: RestaurantBasicLocation?
-    let contact: RestaurantBasicContact?
-    let labels: [RestaurantLabel]?
-    let isBookingRequired: Bool?
-    let isDifficultToBook: Bool?
-    let regionId: String?
 }
 
 struct RestaurantBasicLocation: Equatable {
-    let latitude: Double?
-    let longitude: Double?
-    let address: String?
-}
-
-struct RestaurantBasicContact: Equatable {
-    let phone: String?
-    let menuUrl: URL?
+    let latitude: Double
+    let longitude: Double
+    let address: String
 }
 
 struct PaginationInfo: Equatable {
@@ -60,32 +50,5 @@ struct PaginationInfo: Equatable {
     
     var isLastPage: Bool {
         currentPage == totalPages
-    }
-}
-
-struct PaginationLinks: Equatable {
-    let first: URL?
-    let next: URL?
-    let previous: URL?
-    let last: URL?
-}
-
-enum LabelCategory: String, CaseIterable {
-    case dressCode = "Dress Code"
-    case audience = "Good For"
-    case mealTime = "Meal Times"
-    case dietary = "Dietary"
-    case payment = "Payment"
-    case atmosphere = "Atmosphere"
-    
-    var systemImage: String {
-        switch self {
-        case .dressCode: return "tshirt"
-        case .audience: return "person.3"
-        case .mealTime: return "clock"
-        case .dietary: return "leaf"
-        case .payment: return "creditcard"
-        case .atmosphere: return "sparkles"
-        }
     }
 }

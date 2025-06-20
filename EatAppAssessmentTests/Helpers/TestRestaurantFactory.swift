@@ -38,15 +38,7 @@ enum TestRestaurantFactory {
                 latitude: latitude,
                 longitude: longitude,
                 address: address
-            ),
-            contact: RestaurantBasicContact(
-                phone: phone,
-                menuUrl: menuUrl.flatMap { URL(string: $0) }
-            ),
-            labels: labels,
-            isBookingRequired: isBookingRequired,
-            isDifficultToBook: isDifficultToBook,
-            regionId: regionId
+            )
         )
     }
 
@@ -120,23 +112,8 @@ enum TestRestaurantFactory {
                 ),
                 neighborhood: "King Fahd Road"
             ),
-            contact: .init(
-                phone: "+9661122334455",
-                menuUrl: URL(string: "https://example.com/details-menu.pdf"),
-                externalRatingsUrl: nil
-            ),
-            features: .init(
-                hasAlcohol: false,
-                hasOutdoorSeating: false,
-                allowsSmoking: false,
-                hasValet: false,
-                acceptsBookings: false,
-                isDifficultToBook: false
-            ),
-            operatingHours: OperatingHours(rawHours: ""),
             description: "This is a detailed description of the restaurant.",
             notice: nil,
-            establishmentType: .cafe,
             labels: []
         )
     }
