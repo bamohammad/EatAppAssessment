@@ -11,7 +11,6 @@ import SwiftUI
 
 struct RestaurantListView: View {
     @StateObject private var viewModel: RestaurantListViewModel
-    @EnvironmentObject private var appDIContainer: AppDIContainer
     @EnvironmentObject private var appNavigation: AppNavigation
     @Environment(\.theme) private var theme
 
@@ -83,7 +82,7 @@ private extension RestaurantListView {
         case let .restaurantDetails(restaurant):
             RestaurantDetailView(
                 viewModel: RestaurantDetailsViewModel(
-                    useCase: appDIContainer.makeGetRestaurantDetailsUseCase()
+                    useCase: DIContainer.shared.resolve()
                 ),
                 restaurantId: restaurant.id
             )

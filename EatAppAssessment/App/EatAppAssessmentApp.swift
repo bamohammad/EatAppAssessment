@@ -7,70 +7,63 @@
 
 import SwiftUI
 
-// MARK: - EatAppAssessmentApp
-
 @main
 struct EatAppAssessmentApp: App {
     
-    // MARK: - Properties
+    // MARK: - State & Dependencies
     
     @StateObject private var themeManager = ThemeManager()
     private let appNavigation = AppNavigation()
-    private let appDIContainer = AppDIContainer()
     
-    // MARK: - Scene
+    // MARK: - Init
+    
+    init() {
+        setupDependencies()
+    }
+
+    // MARK: - Body
     
     var body: some Scene {
         WindowGroup {
-            rootView
-                .setupEnvironment(
-                    themeManager: themeManager,
-                    appNavigation: appNavigation,
-                    appDIContainer: appDIContainer
-                )
+            RestaurantListView(viewModel: makeRestaurantListViewModel())
+                .withEnvironment(themeManager: themeManager, appNavigation: appNavigation)
         }
     }
-}
 
-// MARK: - Private Extensions
-
-private extension EatAppAssessmentApp {
-    var rootView: some View {
-        RestaurantListView(
-            viewModel: createRestaurantListViewModel()
-        )
-    }
+    // MARK: - Factory
     
-    func createRestaurantListViewModel() -> RestaurantListViewModel {
-        RestaurantListViewModel(
-            useCase: appDIContainer.makeGetRestaurantsUseCase()
-        )
+    private func makeRestaurantListViewModel() -> RestaurantListViewModel {
+        RestaurantListViewModel(useCase: DIContainer.shared.resolve())
+    }
+
+    // MARK: - DI Setup
+    
+    private func setupDependencies() {
+        DIContainer.shared.registerAPIs()
+        DIContainer.shared.registerRepositories()
+        DIContainer.shared.registerUseCases()
     }
 }
 
-// MARK: - View Extensions
+// MARK: - View Extension for Global Environment
 
 private extension View {
-    func setupEnvironment(
+    func withEnvironment(
         themeManager: ThemeManager,
-        appNavigation: AppNavigation,
-        appDIContainer: AppDIContainer
+        appNavigation: AppNavigation
     ) -> some View {
         self
             .environment(\.theme, themeManager.currentTheme)
             .environmentObject(themeManager)
-            .environmentObject(appDIContainer)
             .environmentObject(appNavigation)
             .preferredColorScheme(themeManager.currentTheme.colorScheme)
     }
 }
 
-// MARK: - Theme Manager Extension
+// MARK: - ThemeManager Helper
 
 extension ThemeManager {
-    /// Convenience computed property for current color scheme
     var currentColorScheme: ColorScheme {
         currentTheme.colorScheme
     }
 }
-

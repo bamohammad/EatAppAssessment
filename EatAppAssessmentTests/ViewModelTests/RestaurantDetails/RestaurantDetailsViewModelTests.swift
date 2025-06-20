@@ -12,17 +12,39 @@ import XCTest
 @MainActor
 final class RestaurantDetailsViewModelTests: XCTestCase {
     private var cancellables = Set<AnyCancellable>()
+    private var mockUseCase: MockGetRestaurantDetailsUseCase!
 
-    private func makeSUT(useCase: MockGetRestaurantDetailsUseCase) -> RestaurantDetailsViewModel {
-        RestaurantDetailsViewModel(useCase: useCase)
+    override func setUp() {
+        super.setUp()
+        DIContainer.shared.reset()
+        mockUseCase = MockGetRestaurantDetailsUseCase()
+
+        DIContainer.shared.register(GetRestaurantDetailsUseCase.self) { [unowned self] in
+            mockUseCase
+        }
+
+        DIContainer.shared.register(RestaurantDetailsViewModel.self) {
+            RestaurantDetailsViewModel(
+                useCase: DIContainer.shared.resolve(GetRestaurantDetailsUseCase.self)
+            )
+        }
+    }
+
+    override func tearDown() {
+        mockUseCase = nil
+        cancellables.removeAll()
+        super.tearDown()
+    }
+
+    private func makeSUT() -> RestaurantDetailsViewModel {
+        DIContainer.shared.resolve(RestaurantDetailsViewModel.self)
     }
 
     func test_loadDetails_success_setsLoadedState() async {
         // Arrange
         let expected = TestRestaurantFactory.makeDetails(id: "123")
-        let mock = MockGetRestaurantDetailsUseCase()
-        mock.stubbedResult = expected
-        let sut = makeSUT(useCase: mock)
+        mockUseCase.stubbedResult = expected
+        let sut = makeSUT()
 
         // Act
         let final = await expectFinalLoadableValue(sut.$state) {
@@ -31,16 +53,15 @@ final class RestaurantDetailsViewModelTests: XCTestCase {
 
         // Assert
         guard case let .loaded(details) = final else {
-            return XCTFail("Expected loaded")
+            return XCTFail("Expected loaded state")
         }
         XCTAssertEqual(details, expected)
     }
 
     func test_loadDetails_failure_setsFailedState() async {
         // Arrange
-        let mock = MockGetRestaurantDetailsUseCase()
-        mock.error = NSError(domain: "Test", code: -1)
-        let sut = makeSUT(useCase: mock)
+        mockUseCase.error = NSError(domain: "Test", code: -1)
+        let sut = makeSUT()
 
         // Act
         let final = await expectFinalLoadableValue(sut.$state) {
@@ -55,3 +76,4 @@ final class RestaurantDetailsViewModelTests: XCTestCase {
         }
     }
 }
+

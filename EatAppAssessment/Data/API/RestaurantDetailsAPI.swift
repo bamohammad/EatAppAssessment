@@ -12,7 +12,7 @@ protocol RestaurantDetailsAPI {
 final class DefaultRestaurantDetailsAPI: RestaurantDetailsAPI {
     private let client: APIClient
 
-    init(client: APIClient = DefaultAPIClient()) {
+    init(client: APIClient) {
         self.client = client
     }
 

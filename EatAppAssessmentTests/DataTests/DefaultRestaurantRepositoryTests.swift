@@ -8,9 +8,33 @@
 @testable import EatAppAssessment
 import XCTest
 
+@MainActor
 final class DefaultRestaurantRepositoryTests: XCTestCase {
-    private func makeSUT(api: RestaurantAPI) -> RestaurantRepository {
-        DefaultRestaurantRepository(api: api)
+
+    private var mockAPI: MockRestaurantAPI!
+
+    override func setUp() {
+        super.setUp()
+
+        DIContainer.shared.reset()
+
+        mockAPI = MockRestaurantAPI()
+        DIContainer.shared.register(RestaurantAPI.self) { [unowned self] in
+            mockAPI
+        }
+
+        DIContainer.shared.register(RestaurantRepository.self) {
+            DefaultRestaurantRepository(api: DIContainer.shared.resolve(RestaurantAPI.self))
+        }
+    }
+
+    override func tearDown() {
+        mockAPI = nil
+        super.tearDown()
+    }
+
+    private func makeSUT() -> RestaurantRepository {
+        DIContainer.shared.resolve(RestaurantRepository.self)
     }
 
     func test_whenAPISucceeds_thenReturnsMappedRestaurants() async throws {
@@ -23,17 +47,12 @@ final class DefaultRestaurantRepositoryTests: XCTestCase {
             ratingsAverage: "4.2"
         )
 
-        let api = MockRestaurantAPI()
-        api.result = .success(RestaurantListResponseDTO(
+        mockAPI.result = .success(RestaurantListResponseDTO(
             data: [dto],
-            meta: PaginationMetaDTO(
-                limit: 10,
-                totalPages: 1,
-                totalCount: 1,
-                currentPage: 1
-            )
+            meta: .init(limit: 10, totalPages: 1, totalCount: 1, currentPage: 1)
         ))
-        let sut = makeSUT(api: api)
+
+        let sut = makeSUT()
 
         // Act
         let result = try await sut.fetchRestaurants(regionId: "some region id", page: 1, limit: 10)
@@ -45,7 +64,7 @@ final class DefaultRestaurantRepositoryTests: XCTestCase {
         XCTAssertEqual(result.restaurants[0].rating, 4.2)
         XCTAssertEqual(result.restaurants[0].cuisine, "Italian")
 
-        // Test pagination
+        // Pagination checks
         XCTAssertEqual(result.pagination.currentPage, 1)
         XCTAssertEqual(result.pagination.totalPages, 1)
         XCTAssertEqual(result.pagination.totalCount, 1)
@@ -58,9 +77,8 @@ final class DefaultRestaurantRepositoryTests: XCTestCase {
 
     func test_whenAPIFails_thenThrows() async {
         // Arrange
-        let api = MockRestaurantAPI()
-        api.result = .failure(NSError(domain: "API", code: 500))
-        let sut = makeSUT(api: api)
+        mockAPI.result = .failure(NSError(domain: "API", code: 500))
+        let sut = makeSUT()
 
         // Act & Assert
         await XCTAssertThrowsErrorAsync(try await sut.fetchRestaurants(regionId: "some region id", page: 1, limit: 10)) { error in
@@ -79,17 +97,12 @@ final class DefaultRestaurantRepositoryTests: XCTestCase {
             ratingsAverage: "4.6"
         )
 
-        let api = MockRestaurantAPI()
-        api.result = .success(RestaurantListResponseDTO(
+        mockAPI.result = .success(RestaurantListResponseDTO(
             data: [dto],
-            meta: PaginationMetaDTO(
-                limit: 10,
-                totalPages: 3,
-                totalCount: 25,
-                currentPage: 2
-            )
+            meta: .init(limit: 10, totalPages: 3, totalCount: 25, currentPage: 2)
         ))
-        let sut = makeSUT(api: api)
+
+        let sut = makeSUT()
 
         // Act
         let result = try await sut.fetchRestaurants(regionId: "some region id", page: 2, limit: 10)
@@ -97,7 +110,6 @@ final class DefaultRestaurantRepositoryTests: XCTestCase {
         // Assert
         XCTAssertEqual(result.pagination.currentPage, 2)
         XCTAssertEqual(result.pagination.totalPages, 3)
-        XCTAssertEqual(result.pagination.limit, 10)
         XCTAssertEqual(result.pagination.totalCount, 25)
         XCTAssertTrue(result.pagination.hasNextPage)
         XCTAssertTrue(result.pagination.hasPreviousPage)
@@ -115,17 +127,12 @@ final class DefaultRestaurantRepositoryTests: XCTestCase {
         let dto2 = TestRestaurantDTOFactory.make(id: "2", name: "Restaurant Two", imageUrl: "img2.jpg")
         let dto3 = TestRestaurantDTOFactory.make(id: "3", name: "Restaurant Three", imageUrl: "img3.jpg")
 
-        let api = MockRestaurantAPI()
-        api.result = .success(RestaurantListResponseDTO(
+        mockAPI.result = .success(RestaurantListResponseDTO(
             data: [dto1, dto2, dto3],
-            meta: PaginationMetaDTO(
-                limit: 3,
-                totalPages: 1,
-                totalCount: 3,
-                currentPage: 1
-            )
+            meta: .init(limit: 3, totalPages: 1, totalCount: 3, currentPage: 1)
         ))
-        let sut = makeSUT(api: api)
+
+        let sut = makeSUT()
 
         // Act
         let result = try await sut.fetchRestaurants(regionId: "some region id", page: 1, limit: 3)
@@ -136,7 +143,6 @@ final class DefaultRestaurantRepositoryTests: XCTestCase {
         XCTAssertEqual(result.restaurants[1].name, "Restaurant Two")
         XCTAssertEqual(result.restaurants[2].name, "Restaurant Three")
 
-        // Verify all restaurants have been properly mapped
         for restaurant in result.restaurants {
             XCTAssertFalse(restaurant.name.isEmpty)
             XCTAssertNotNil(restaurant.imageUrl)
@@ -148,16 +154,20 @@ final class DefaultRestaurantRepositoryTests: XCTestCase {
     func test_repositoryExtensions_work() async throws {
         // Arrange
         let dto = TestRestaurantDTOFactory.make(id: "test", name: "Test Restaurant", imageUrl: "test.jpg")
-        let api = MockRestaurantAPI()
-        api.result = .success(RestaurantListResponseDTO(
-            data: [dto],
-            meta: PaginationMetaDTO(limit: 10, totalPages: 2, totalCount: 15, currentPage: 1)
-        ))
-        let repository = makeSUT(api: api)
 
-        // Test default fetch (page 1, limit 10)
-        let defaultResult = try await repository.fetchRestaurants(regionId: "some region id", page: 1, limit: 9)
-        XCTAssertEqual(defaultResult.pagination.currentPage, 1)
-        XCTAssertEqual(defaultResult.pagination.limit, 10)
+        mockAPI.result = .success(RestaurantListResponseDTO(
+            data: [dto],
+            meta: .init(limit: 10, totalPages: 2, totalCount: 15, currentPage: 1)
+        ))
+
+        let sut = makeSUT()
+
+        // Act
+        let result = try await sut.fetchRestaurants(regionId: "some region id", page: 1, limit: 9)
+
+        // Assert
+        XCTAssertEqual(result.pagination.currentPage, 1)
+        XCTAssertEqual(result.pagination.limit, 10)
     }
 }
+

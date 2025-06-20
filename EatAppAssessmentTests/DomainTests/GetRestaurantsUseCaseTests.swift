@@ -12,8 +12,33 @@ import XCTest
 final class GetRestaurantsUseCaseTests: XCTestCase {
 
     private let regionId = "3906535a-d96c-47cf-99b0-009fc9e038e0"
-    private func makeSUT(repo: RestaurantRepository) -> GetRestaurantsUseCase {
-        DefaultGetRestaurantsUseCase(repository: repo)
+    private var mockRepository: MockRestaurantRepository!
+
+    override func setUp() {
+        super.setUp()
+
+        // Reset and register fresh mock
+        DIContainer.shared.reset()
+
+        mockRepository = MockRestaurantRepository()
+        DIContainer.shared.register(RestaurantRepository.self) { [unowned self] in
+            mockRepository
+        }
+
+        DIContainer.shared.register(GetRestaurantsUseCase.self) {
+            DefaultGetRestaurantsUseCase(
+                repository: DIContainer.shared.resolve(RestaurantRepository.self)
+            )
+        }
+    }
+
+    override func tearDown() {
+        mockRepository = nil
+        super.tearDown()
+    }
+
+    private func makeSUT() -> GetRestaurantsUseCase {
+        DIContainer.shared.resolve(GetRestaurantsUseCase.self)
     }
 
     func test_whenRepositorySucceeds_thenReturnsRequestedPage() async throws {
@@ -21,9 +46,8 @@ final class GetRestaurantsUseCaseTests: XCTestCase {
         let restaurants = (1...25).map {
             TestRestaurantFactory.make(id: "\($0)", name: $0 == 21 ? "A" : "R\($0)")
         }
-        let repo = MockRestaurantRepository()
-        repo.valuesToEmit = restaurants
-        let sut = makeSUT(repo: repo)
+        mockRepository.valuesToEmit = restaurants
+        let sut = makeSUT()
         let page = 3
         let limit = 10
 
@@ -34,15 +58,14 @@ final class GetRestaurantsUseCaseTests: XCTestCase {
         XCTAssertEqual(result.pagination.currentPage, page)
         XCTAssertEqual(result.pagination.totalPages, 3)
         XCTAssertEqual(result.restaurants.first?.name, "A")
-        XCTAssertEqual(repo.recordedRequests.first?.page, page)
-        XCTAssertEqual(repo.recordedRequests.first?.limit, limit)
+        XCTAssertEqual(mockRepository.recordedRequests.first?.page, page)
+        XCTAssertEqual(mockRepository.recordedRequests.first?.limit, limit)
     }
 
     func test_whenRepositoryFails_thenThrowsError() async {
         // Arrange
-        let repo = MockRestaurantRepository()
-        repo.errorPages = [1]
-        let sut = makeSUT(repo: repo)
+        mockRepository.errorPages = [1]
+        let sut = makeSUT()
 
         // Act & Assert
         await XCTAssertThrowsErrorAsync(try await sut.execute(regionId: regionId, page: 1, limit: 10)) { error in
@@ -52,3 +75,4 @@ final class GetRestaurantsUseCaseTests: XCTestCase {
         }
     }
 }
+

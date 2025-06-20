@@ -8,18 +8,113 @@
 @testable import EatAppAssessment
 import XCTest
 
+@MainActor
 final class RestaurantDetailsAPITests: XCTestCase {
-    
-    // MARK: - SUT Factory
-    private func makeSUT(client: APIClient) -> RestaurantDetailsAPI {
-        DefaultRestaurantDetailsAPI(client: client)
+
+    // MARK: – Stored mocks
+    private var mockClient: MockAPIClient!
+
+    // MARK: – Test bootstrap
+    override func setUp() {
+        super.setUp()
+
+        DIContainer.shared.reset()
+
+        mockClient = MockAPIClient()
+        DIContainer.shared.register(APIClient.self) { [unowned self] in
+            mockClient
+        }
+
+        DIContainer.shared.register(RestaurantDetailsAPI.self) {
+            DefaultRestaurantDetailsAPI(client: DIContainer.shared.resolve())
+        }
     }
 
-    // MARK: - Tests
+    override func tearDown() {
+        mockClient = nil
+        super.tearDown()
+    }
 
+    /// Convenience resolver
+    private func makeSUT() -> RestaurantDetailsAPI {
+        DIContainer.shared.resolve(RestaurantDetailsAPI.self)
+    }
+
+    // MARK: – Tests
     func test_whenFetchSucceeds_thenParsesDTOCorrectly() async throws {
         // Arrange
-        let json = """
+        mockClient.result = .success(successJSON)
+        let sut = makeSUT()
+
+        // Act
+        let dto = try await sut.fetchRestaurant(id: "098301ea-6f1e-45c2-8958-f34df4cdeea8")
+
+        // Assert
+        XCTAssertEqual(dto.data?.id, "098301ea-6f1e-45c2-8958-f34df4cdeea8")
+        XCTAssertEqual(dto.data?.attributes?.name, "Ronda Locatelli")
+        XCTAssertEqual(dto.data?.attributes?.cuisine, "Italian")
+        XCTAssertEqual(dto.data?.attributes?.priceLevel, 2)
+        XCTAssertEqual(dto.data?.attributes?.ratingsAverage, "4.0")
+        XCTAssertEqual(dto.data?.attributes?.labels?.count, 2)
+    }
+
+    func test_whenResponseIsMalformedJSON_thenThrowsDecodingError() async {
+        // Arrange
+        mockClient.result = .success(Data("not json".utf8))
+        let sut = makeSUT()
+
+        // Act & Assert
+        await XCTAssertThrowsErrorAsync(try await sut.fetchRestaurant(id: "bad")) {
+            XCTAssertTrue($0 is DecodingError)
+        }
+    }
+
+    func test_whenClientFails_thenPropagatesError() async {
+        // Arrange
+        mockClient.result = .failure(NSError(domain: "Net", code: -1001))
+        let sut = makeSUT()
+
+        // Act & Assert
+        await XCTAssertThrowsErrorAsync(try await sut.fetchRestaurant(id: "foo")) { error in
+            let ns = error as NSError
+            XCTAssertEqual(ns.domain, "Net")
+            XCTAssertEqual(ns.code, -1001)
+        }
+    }
+
+    func test_whenResponseHasIncompleteData_thenParsesOptionals() async throws {
+        // Arrange
+        mockClient.result = .success(incompleteJSON)
+        let sut = makeSUT()
+
+        // Act
+        let dto = try await sut.fetchRestaurant(id: "min")
+
+        // Assert
+        XCTAssertEqual(dto.data?.attributes?.name, "Mini")
+        XCTAssertNil(dto.data?.attributes?.imageUrl)
+        XCTAssertNil(dto.data?.attributes?.menuUrl)
+    }
+
+    func test_requestParameters_areCorrectlySet() async throws {
+        // Arrange
+        let spy = SpyAPIClient()
+        DIContainer.shared.register(APIClient.self) { spy }          // override client
+        let sut = DefaultRestaurantDetailsAPI(client: DIContainer.shared.resolve())
+
+        // Act
+        _ = try? await sut.fetchRestaurant(id: "abc-123")
+
+        // Assert
+        XCTAssertEqual(spy.capturedRequest?.path, "/consumer/v2/restaurants/abc-123")
+        XCTAssertEqual(spy.capturedRequest?.method, .GET)
+        XCTAssertEqual(spy.capturedRequest?.headers["Content-Type"], "application/json")
+        XCTAssertTrue(spy.capturedRequest?.queryItems.isEmpty ?? false)
+    }
+
+    // MARK: – Test fixtures
+    private var successJSON: Data {
+        """
         {
           "data": {
             "id": "098301ea-6f1e-45c2-8958-f34df4cdeea8",
@@ -43,56 +138,10 @@ final class RestaurantDetailsAPITests: XCTestCase {
           }
         }
         """.data(using: .utf8)!
-
-        let client = MockAPIClient()
-        client.result = .success(json)
-        let sut = makeSUT(client: client)
-
-        // Act
-        let dto = try await sut.fetchRestaurant(id: "098301ea-6f1e-45c2-8958-f34df4cdeea8")
-
-        // Assert
-        XCTAssertEqual(dto.data?.id, "098301ea-6f1e-45c2-8958-f34df4cdeea8")
-        XCTAssertEqual(dto.data?.attributes?.name, "Ronda Locatelli")
-        XCTAssertEqual(dto.data?.attributes?.cuisine, "Italian")
-        XCTAssertEqual(dto.data?.attributes?.priceLevel, 2)
-        XCTAssertEqual(dto.data?.attributes?.ratingsAverage, "4.0")
-        XCTAssertEqual(dto.data?.attributes?.labels?.count, 2)
     }
 
-    func test_whenResponseIsMalformedJSON_thenThrowsDecodingError() async {
-        // Arrange
-        let client = MockAPIClient()
-        client.result = .success(Data("not json".utf8))
-        let sut = makeSUT(client: client)
-
-        // Act & Assert
-        await XCTAssertThrowsErrorAsync(
-            try await sut.fetchRestaurant(id: "bad")
-        ) { error in
-            XCTAssertTrue(error is DecodingError)
-        }
-    }
-
-    func test_whenClientFails_thenThrowsError() async {
-        // Arrange
-        let client = MockAPIClient()
-        client.result = .failure(NSError(domain: "Net", code: -1001))
-        let sut = makeSUT(client: client)
-
-        // Act & Assert
-        await XCTAssertThrowsErrorAsync(
-            try await sut.fetchRestaurant(id: "foo")
-        ) { error in
-            let ns = error as NSError
-            XCTAssertEqual(ns.domain, "Net")
-            XCTAssertEqual(ns.code, -1001)
-        }
-    }
-
-    func test_whenResponseHasIncompleteData_thenParsesOptionalsCorrectly() async throws {
-        // Arrange
-        let json = """
+    private var incompleteJSON: Data {
+        """
         {
           "data": {
             "id": "min",
@@ -111,32 +160,6 @@ final class RestaurantDetailsAPITests: XCTestCase {
           }
         }
         """.data(using: .utf8)!
-
-        let client = MockAPIClient()
-        client.result = .success(json)
-        let sut = makeSUT(client: client)
-
-        // Act
-        let dto = try await sut.fetchRestaurant(id: "min")
-
-        // Assert
-        XCTAssertEqual(dto.data?.attributes?.name, "Mini")
-        XCTAssertNil(dto.data?.attributes?.imageUrl)
-        XCTAssertNil(dto.data?.attributes?.menuUrl)
-    }
-
-    func test_apiRequestParameters_areSetCorrectly() async throws {
-        // Arrange
-        let spy = SpyAPIClient()
-        let sut = makeSUT(client: spy)
-
-        // Act
-        _ = try? await sut.fetchRestaurant(id: "abc-123")
-
-        // Assert
-        XCTAssertEqual(spy.capturedRequest?.path, "/consumer/v2/restaurants/abc-123")
-        XCTAssertEqual(spy.capturedRequest?.method, .GET)
-        XCTAssertEqual(spy.capturedRequest?.headers["Content-Type"], "application/json")
-        XCTAssertTrue(spy.capturedRequest?.queryItems.isEmpty ?? false)
     }
 }
+
