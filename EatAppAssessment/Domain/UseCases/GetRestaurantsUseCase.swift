@@ -9,6 +9,7 @@ import Foundation
 
 protocol GetRestaurantsUseCase {
     func execute(
+        search:String,
         regionId: String,
         page: Int,
         limit: Int
@@ -23,11 +24,13 @@ final class DefaultGetRestaurantsUseCase: GetRestaurantsUseCase {
     }
 
     func execute(
+        search:String,
         regionId: String,
         page: Int,
         limit: Int
     ) async throws -> RestaurantList {
         return try await repository.fetchRestaurants(
+            search: search,
             regionId: regionId,
             page: page,
             limit: limit

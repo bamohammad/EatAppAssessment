@@ -9,5 +9,5 @@
 import Foundation
 
 protocol RestaurantRepository {
-    func fetchRestaurants(regionId: String,page: Int, limit: Int) async throws -> RestaurantList
+    func fetchRestaurants(search:String, regionId: String,page: Int, limit: Int) async throws -> RestaurantList
 }

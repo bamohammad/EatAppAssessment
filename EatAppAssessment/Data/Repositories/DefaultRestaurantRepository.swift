@@ -12,12 +12,8 @@ final class DefaultRestaurantRepository: RestaurantRepository {
         self.api = api
     }
 
-    func fetchRestaurants(regionId:String ,page: Int, limit: Int) async throws -> RestaurantList {
-        do {
-            let dto = try await api.fetchRestaurants(regionId: regionId, page: page, limit: limit)
-            return RestaurantList(from: dto)
-        } catch {
-            throw error
-        }
+    func fetchRestaurants(search: String, regionId: String, page: Int, limit: Int) async throws -> RestaurantList {
+        let dto = try await api.fetchRestaurants(search: search, regionId: regionId, page: page, limit: limit)
+        return RestaurantList(from: dto)
     }
 }

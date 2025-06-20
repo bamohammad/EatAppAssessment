@@ -10,7 +10,7 @@ import Combine
 import SwiftUI
 
 final class ThemeManager: ObservableObject {
-    @Published private(set) var currentThemeMode: AppThemeMode = .light
+    @Published private(set) var currentThemeMode: AppThemeMode = .dark
 
     var currentTheme: AppTheme {
         switch currentThemeMode {

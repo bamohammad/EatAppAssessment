@@ -14,6 +14,8 @@ struct RestaurantListView: View {
     @EnvironmentObject private var appNavigation: AppNavigation
     @Environment(\.theme) private var theme
 
+    @State var searchText: String = ""
+
     init(viewModel: RestaurantListViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
     }
@@ -36,8 +38,14 @@ struct RestaurantListView: View {
         }
         .preferredColorScheme(theme.colorScheme)
         .accentColor(.white)
+        .searchable(text: $searchText)
         .task {
             viewModel.loadFirstPage()
+        }
+        .onChange(of: searchText) { _, newValue in
+            Task {
+                await viewModel.search(search: newValue)
+            }
         }
     }
 }
@@ -46,25 +54,27 @@ struct RestaurantListView: View {
 
 private extension RestaurantListView {
     func restaurantList(_ restaurants: [Restaurant]) -> some View {
-        List {
-            ForEach(restaurants) { restaurant in
-                RestaurantRowView(restaurant: restaurant)
-                    .onAppear {
-                        viewModel.loadNextPageIfNeeded(currentItem: restaurant)
-                    }
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    .onTapGesture {
-                        handleRestaurantSelection(restaurant)
-                    }
+        VStack {
+            List {
+                ForEach(restaurants) { restaurant in
+                    RestaurantRowView(restaurant: restaurant)
+                        .onAppear {
+                            viewModel.loadNextPageIfNeeded(currentItem: restaurant)
+                        }
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .onTapGesture {
+                            handleRestaurantSelection(restaurant)
+                        }
+                }
             }
-        }
-        .listStyle(.plain)
-        .background(theme.colors.background)
-        .scrollContentBackground(.hidden)
-        .refreshable {
-            await viewModel.refresh()
+            .listStyle(.plain)
+            .background(theme.colors.background)
+            .scrollContentBackground(.hidden)
+            .refreshable {
+                await viewModel.refresh()
+            }
         }
     }
 
@@ -137,7 +147,7 @@ private extension RestaurantRowView {
 
             Spacer()
 
-            RatingView(rating:restaurant.formattedRating)
+            RatingView(rating: restaurant.formattedRating)
         }
     }
 
@@ -182,7 +192,6 @@ private extension RestaurantRowView {
         .padding(Constants.contentPadding)
     }
 }
-
 
 // MARK: - RestaurantTagView
 

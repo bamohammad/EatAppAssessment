@@ -19,7 +19,8 @@ final class RestaurantListViewModel: ObservableObject {
 
     private let useCase: GetRestaurantsUseCase
     private var fetchTask: Task<Void, Never>?
-    private var isRefreshing = false
+    var isRefreshing = false
+    var search = ""
 
     // MARK: - Pagination
 
@@ -92,6 +93,7 @@ final class RestaurantListViewModel: ObservableObject {
             }
             do {
                 let response = try await useCase.execute(
+                    search: search,
                     regionId: "3906535a-d96c-47cf-99b0-009fc9e038e0",
                     page: page,
                     limit: pageSize
@@ -113,6 +115,13 @@ final class RestaurantListViewModel: ObservableObject {
         }
     }
 
+    func search(search:String) async {
+        guard self.search != search else {
+            return
+        }
+        self.search = search
+        loadFirstPage()
+    }
     private func cancelCurrentTask() {
         fetchTask?.cancel()
         fetchTask = nil

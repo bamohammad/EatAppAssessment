@@ -9,7 +9,7 @@
 import Foundation
 
 protocol RestaurantAPI {
-    func fetchRestaurants(regionId: String, page: Int, limit: Int) async throws -> RestaurantListResponseDTO
+    func fetchRestaurants(search:String, regionId: String, page: Int, limit: Int) async throws -> RestaurantListResponseDTO
 }
 
 final class DefaultRestaurantAPI: RestaurantAPI {
@@ -19,7 +19,7 @@ final class DefaultRestaurantAPI: RestaurantAPI {
         self.client = client
     }
 
-    func fetchRestaurants(regionId: String, page: Int, limit: Int) async throws -> RestaurantListResponseDTO {
+    func fetchRestaurants(search:String, regionId: String, page: Int, limit: Int) async throws -> RestaurantListResponseDTO {
         let request = APIRequest(
             path: "/consumer/v2/restaurants",
             method: .GET,
@@ -27,7 +27,8 @@ final class DefaultRestaurantAPI: RestaurantAPI {
             queryItems: [
                 URLQueryItem(name: "region_id", value: regionId),
                 URLQueryItem(name: "limit", value: "\(limit)"),
-                URLQueryItem(name: "page", value: "\(page)")
+                URLQueryItem(name: "page", value: "\(page)"),
+                URLQueryItem(name: "q", value: "\(search)")
             ]
         )
         return try await client.request(request)

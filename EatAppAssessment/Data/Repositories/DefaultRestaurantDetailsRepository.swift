@@ -14,11 +14,7 @@ final class DefaultRestaurantDetailsRepository: RestaurantDetailsRepository {
     }
 
     func fetchRestaurant(id:String) async throws -> RestaurantDetails {
-        do {
             let dto = try await api.fetchRestaurant(id: id)
             return RestaurantDetails(from: dto)
-        } catch {
-            throw error
-        }
     }
 }
